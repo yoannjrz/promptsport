@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PromptSport — Analyses IA</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0f0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0f0d;
+  --surface: #121814;
+  --surface2: #1a221d;
+  --surface3: #232b25;
+  --border: rgba(255,255,255,0.07);
+  --border-strong: rgba(255,255,255,0.15);
+  --accent: #00e5a0;
+  --accent-dim: rgba(0,229,160,0.15);
+  --tennis: #f5d547;
+  --tennis-dim: rgba(245,213,71,0.15);
+  --basket: #ff7a3d;
+  --basket-dim: rgba(255,122,61,0.15);
+  --gold: #ffb84d;
+  --text: #f0f5f2;
+  --muted: #6b7a72;
+  --danger: #ff5577;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; padding-bottom: 80px; }
+body::before { content: ''; position: fixed; top: -300px; left: -200px; width: 700px; height: 700px; background: radial-gradient(circle, rgba(0,229,160,0.06) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+.wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 16px 14px; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 14px; position: sticky; top: 0; background: rgba(10,15,13,0.95); backdrop-filter: blur(10px); z-index: 50; }
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 3px; background: linear-gradient(135deg, var(--accent) 0%, #00b4d8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header-actions { display: flex; gap: 8px; }
+.icon-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; }
+.sport-toggle { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 50px; padding: 4px; margin-bottom: 12px; gap: 4px; }
+.sport-btn { flex: 1; padding: 10px 6px; border: none; border-radius: 46px; background: transparent; color: var(--muted); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.25s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.sport-btn.active[data-sport="foot"] { background: var(--accent); color: #000; }
+.sport-btn.active[data-sport="tennis"] { background: var(--tennis); color: #000; }
+.sport-btn.active[data-sport="basket"] { background: var(--basket); color: #000; }
+.date-tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; }
+.date-tabs::-webkit-scrollbar { display: none; }
+.date-tab { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; min-width: 60px; gap: 1px; }
+.date-tab.active { background: var(--accent); color: #000; border-color: var(--accent); }
+.date-tab .day { font-size: 16px; font-weight: 700; line-height: 1; }
+.date-tab .label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+.filter-bar { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+.filter-bar::-webkit-scrollbar { display: none; }
+.filter-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 50px; padding: 8px 14px; font-size: 11px; color: var(--text); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.filter-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.filter-chip .count { background: var(--accent); color: #000; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700; }
+.league-group { margin-bottom: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.league-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--surface2); cursor: pointer; user-select: none; }
+.league-flag { font-size: 18px; width: 24px; text-align: center; }
+.league-name { flex: 1; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.league-count { background: var(--accent-dim); color: var(--accent); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 50px; }
+.league-toggle { color: var(--muted); transition: transform 0.2s; }
+.league-group.collapsed .league-toggle { transform: rotate(-90deg); }
+.league-group.collapsed .league-body { display: none; }
+.match-row { display: grid; grid-template-columns: 50px 1fr auto; align-items: center; padding: 12px 14px; border-top: 1px solid var(--border); cursor: pointer; gap: 10px; }
+.match-row:active { background: var(--surface2); }
+.match-time-col { display: flex; flex-direction: column; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.match-time-col .time { color: var(--text); font-weight: 600; }
+.match-time-col .status { font-size: 9px; color: var(--muted); text-transform: uppercase; margin-top: 1px; }
+.match-time-col .status.live { color: var(--danger); font-weight: 700; }
+.match-teams-col { min-width: 0; }
+.team-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 13px; }
+.team-row .team-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.team-row .team-score { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent); }
+.odds-col { display: flex; flex-direction: column; gap: 2px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); min-width: 38px; }
+.odds-col .fav { color: var(--accent); font-weight: 600; }
+.drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 100; display: none; align-items: flex-end; }
+.drawer-overlay.show { display: flex; animation: fadeIn 0.2s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.drawer { background: var(--bg); border-top: 1px solid var(--border-strong); border-radius: 24px 24px 0 0; width: 100%; max-width: 480px; margin: 0 auto; max-height: 92vh; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.drawer-handle { width: 40px; height: 4px; background: var(--border-strong); border-radius: 2px; margin: 8px auto 0; }
+.drawer-content { padding: 16px 18px 80px; }
+.drawer-match { text-align: center; padding: 16px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.drawer-league { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+.drawer-teams { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1px; line-height: 1.2; }
+.drawer-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); margin-top: 6px; }
+.section-title { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 10px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.prompt-pills { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.prompt-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 8px; color: var(--text); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; }
+.prompt-pill:active { transform: scale(0.97); }
+.prompt-pill:hover { border-color: var(--accent); background: var(--surface2); }
+.prompt-pill .ico { font-size: 14px; }
+.main-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.main-action { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; }
+.main-action:active { transform: scale(0.99); }
+.main-action:hover { border-color: var(--accent); background: var(--surface2); }
+.main-action .ico { font-size: 18px; width: 26px; text-align: center; }
+.main-action.primary { background: linear-gradient(135deg, var(--accent), #00b4d8); color: #000; border-color: transparent; font-weight: 700; }
+.output-section { background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 16px; margin-top: 14px; animation: slideIn 0.3s ease; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.output-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
+.output-title { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; }
+.actions { display: flex; gap: 6px; }
+.action-btn { background: var(--accent); border: none; border-radius: 8px; padding: 7px 12px; color: #000; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.action-btn:active { transform: scale(0.95); }
+.action-btn.secondary { background: transparent; border: 1px solid var(--border-strong); color: var(--text); }
+.action-btn.copied { background: #00c850; }
+.prompt-text { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.7; color: #d0d8d4; white-space: pre-wrap; word-break: break-word; max-height: 280px; overflow-y: auto; }
+.loader { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-view { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-view .big-ico { font-size: 56px; margin-bottom: 14px; opacity: 0.5; }
+.empty-view h3 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; color: var(--text); margin-bottom: 8px; }
+.empty-view p { font-size: 13px; line-height: 1.6; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(18,24,20,0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--border); padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); z-index: 80; display: flex; justify-content: space-around; max-width: 480px; margin: 0 auto; }
+.nav-item { background: none; border: none; color: var(--muted); font-family: inherit; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 12px; }
+.nav-item .nav-ico { font-size: 22px; }
+.nav-item.active { color: var(--accent); }
+.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--accent); color: #000; padding: 12px 22px; border-radius: 50px; font-size: 13px; font-weight: 700; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 200; box-shadow: 0 10px 40px rgba(0,229,160,0.4); max-width: 90%; text-align: center; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.error { background: var(--danger); color: #fff; }
+.view { display: none; }
+.view.active { display: block; }
+.info-text { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 8px; padding: 12px; background: var(--surface); border-radius: 10px; border: 1px solid var(--border); }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+  <header>
+    <div class="logo">PROMPTSPORT</div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="location.reload()" title="Rafraîchir">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="view active" id="view-matchs">
+    <div class="sport-toggle">
+      <button class="sport-btn active" data-sport="foot" onclick="setSport('foot')">⚽ Foot</button>
+      <button class="sport-btn" data-sport="tennis" onclick="setSport('tennis')">🎾 Tennis</button>
+      <button class="sport-btn" data-sport="basket" onclick="setSport('basket')">🏀 Basket</button>
+    </div>
+
+    <div class="date-tabs" id="dateTabs"></div>
+
+    <div class="filter-bar">
+      <button class="filter-chip active" onclick="setFilter('all')">Tous</button>
+      <button class="filter-chip" onclick="setFilter('top')">⭐ Top</button>
+    </div>
+
+    <div id="matchsContainer"></div>
+  </div>
+
+  <div class="view" id="view-info">
+    <div class="empty-view">
+      <div class="big-ico">📖</div>
+      <h3>À propos</h3>
+      <p>PromptSport — Génère des prompts d'analyse pour Claude.<br><br>Données via Sofascore.<br>Foot · Tennis · Basket (NBA, EuroLeague, etc.)</p>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="drawer">
+  <div class="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-content" id="drawerContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Prompt copié !</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" data-view="matchs" onclick="setView('matchs')">
+    <span class="nav-ico">📅</span><span>Matchs</span>
+  </button>
+  <button class="nav-item" data-view="info" onclick="setView('info')">
+    <span class="nav-ico">ℹ️</span><span>Info</span>
+  </button>
+</nav>
+
+<script>
+'use strict';
+
+// ====================
+// CONFIGURATION
+// ====================
+const API_PROXY = '/api/sofa';
+
+// Sofascore sport slugs
+const SPORT_SLUGS = {
+  foot: 'football',
+  tennis: 'tennis',
+  basket: 'basketball'
+};
+
+const PROMPT_TYPES = {
+  foot: [
+    { id: '90-1x2', icon: '⚖️', label: 'Résultat 1X2', cat: 'main' },
+    { id: '45-1x2', icon: '⚖️', label: '1X2 mi-temps', cat: 'main' },
+    { id: '90-buts', icon: '📈', label: 'Total buts', cat: 'main' },
+    { id: 'btts', icon: '🥅', label: 'BTTS', cat: 'main' },
+    { id: '90-scores', icon: '🎯', label: 'Score exact', cat: 'main' },
+    { id: 'minute-15', icon: '⏱️', label: 'But avant 15\'', cat: 'stats' },
+    { id: 'corners', icon: '🚩', label: 'Corners', cat: 'stats' },
+    { id: 'cartons', icon: '🟨', label: 'Cartons', cat: 'stats' },
+    { id: 'double-combo', icon: '🎲', label: 'Combo 2', cat: 'combo' },
+    { id: 'triple-combo', icon: '🎰', label: 'Combo 3', cat: 'combo' },
+  ],
+  tennis: [
+    { id: 'winner', icon: '🏆', label: 'Vainqueur', cat: 'main' },
+    { id: 'sets', icon: '🎾', label: 'Score en sets', cat: 'main' },
+    { id: 'games-total', icon: '📊', label: 'Total jeux', cat: 'main' },
+    { id: 'first-set', icon: '1️⃣', label: 'Vainqueur 1er set', cat: 'main' },
+    { id: 'handicap-sets', icon: '⚖️', label: 'Handicap sets', cat: 'handicap' },
+    { id: 'handicap-games', icon: '⚖️', label: 'Handicap jeux', cat: 'handicap' },
+    { id: 'tiebreak', icon: '🎯', label: 'Tie-break', cat: 'stats' },
+    { id: 'aces', icon: '⚡', label: 'Total aces', cat: 'stats' },
+  ],
+  basket: [
+    { id: 'winner-bb', icon: '🏆', label: 'Vainqueur ML', cat: 'main' },
+    { id: 'handicap-bb', icon: '⚖️', label: 'Spread', cat: 'main' },
+    { id: 'total-pts', icon: '📈', label: 'Total points', cat: 'main' },
+    { id: 'mi-temps-bb', icon: '⏱️', label: 'Mi-temps', cat: 'main' },
+    { id: 'quart-1', icon: '1️⃣', label: 'Vainqueur Q1', cat: 'quart' },
+    { id: 'pts-q1', icon: '📊', label: 'Points Q1', cat: 'quart' },
+    { id: 'trois-points', icon: '3️⃣', label: 'Tirs à 3pts', cat: 'stats' },
+    { id: 'double-combo-bb', icon: '🎲', label: 'Combo 2', cat: 'combo' },
+  ]
+};
+
+const STATE = {
+  sport: 'foot',
+  date: 'today',
+  filter: 'all',
+  view: 'matchs',
+  selectedMatch: null,
+  currentPrompt: '',
+  matchesCache: {}
+};
+
+function $(id) { return document.getElementById(id); }
+function toast(msg, type) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'error' ? ' error' : '');
+  setTimeout(() => t.className = 'toast' + (type === 'error' ? ' error' : ''), 3000);
+}
+
+// ====================
+// API CALLS
+// ====================
+async function api(path, params = {}) {
+  const url = new URL(API_PROXY, window.location.origin);
+  url.searchParams.set('path', path);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  
+  const resp = await fetch(url.toString());
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${resp.status}`);
+  }
+  return resp.json();
+}
+
+// ====================
+// UI / NAVIGATION
+// ====================
+function setSport(sport) {
+  STATE.sport = sport;
+  document.querySelectorAll('.sport-btn').forEach(b => b.classList.toggle('active', b.dataset.sport === sport));
+  loadMatches();
+}
+
+function setDate(date) {
+  STATE.date = date;
+  renderDateTabs();
+  loadMatches();
+}
+
+function setFilter(filter) {
+  STATE.filter = filter;
+  document.querySelectorAll('.filter-chip').forEach((c, i) => {
+    c.classList.toggle('active', (filter === 'all' && i === 0) || (filter === 'top' && i === 1));
+  });
+  renderMatchs();
+}
+
+function setView(view) {
+  STATE.view = view;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  $(`view-${view}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  window.scrollTo(0, 0);
+}
+
+// ====================
+// DATE TABS
+// ====================
+function renderDateTabs() {
+  const today = new Date();
+  const tabs = [];
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const key = formatDateKey(d);
+    const isActive = STATE.date === (i === 0 ? 'today' : key);
+    const label = i === 0 ? 'Auj.' : i === 1 ? 'Demain' : ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][d.getDay()];
+    tabs.push(`
+      <div class="date-tab ${isActive ? 'active' : ''}" onclick="setDate('${i === 0 ? 'today' : key}')">
+        <div class="day">${d.getDate()}</div>
+        <div class="label">${label}</div>
+      </div>
+    `);
+  }
+  $('dateTabs').innerHTML = tabs.join('');
+}
+
+function formatDateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getCurrentDateString() {
+  if (STATE.date === 'today') return formatDateKey(new Date());
+  return STATE.date;
+}
+
+// ====================
+// LOAD MATCHES (Sofascore)
+// ====================
+async function loadMatches() {
+  const cacheKey = `${STATE.sport}-${STATE.date}`;
+  
+  if (STATE.matchesCache[cacheKey]) {
+    renderMatchs();
+    return;
+  }
+
+  $('matchsContainer').innerHTML = `<div class="loader"><div class="spinner"></div>Chargement des matchs...</div>`;
+
+  try {
+    const sport = SPORT_SLUGS[STATE.sport];
+    const date = getCurrentDateString();
+    
+    // Sofascore scheduled events endpoint
+    const data = await api(`sport/${sport}/scheduled-events/${date}`);
+    
+    const events = data.events || [];
+    STATE.matchesCache[cacheKey] = events.map(e => ({
+      id: e.id,
+      customId: e.customId,
+      home: e.homeTeam.name,
+      away: e.awayTeam.name,
+      homeId: e.homeTeam.id,
+      awayId: e.awayTeam.id,
+      league: e.tournament?.name || 'Inconnu',
+      country: e.tournament?.category?.flag || e.tournament?.category?.name || '',
+      flag: getCountryFlag(e.tournament?.category?.flag),
+      timestamp: e.startTimestamp,
+      time: new Date(e.startTimestamp * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      status: e.status?.type,
+      homeScore: e.homeScore?.current,
+      awayScore: e.awayScore?.current,
+      top: isTopLeague(e.tournament?.name, STATE.sport),
+      ground: e.groundType
+    }));
+    
+    renderMatchs();
+  } catch (err) {
+    console.error(err);
+    $('matchsContainer').innerHTML = `
+      <div class="empty-view">
+        <div class="big-ico">⚠️</div>
+        <h3>Erreur de chargement</h3>
+        <p>${err.message}<br><br>Vérifie que la clé API est configurée sur Vercel.</p>
+      </div>
+    `;
+  }
+}
+
+function getCountryFlag(code) {
+  if (!code) return '🏆';
+  const map = {
+    'france': '🇫🇷', 'fr': '🇫🇷',
+    'england': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'gb-eng': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    'spain': '🇪🇸', 'es': '🇪🇸',
+    'italy': '🇮🇹', 'it': '🇮🇹',
+    'germany': '🇩🇪', 'de': '🇩🇪',
+    'norway': '🇳🇴', 'no': '🇳🇴',
+    'usa': '🇺🇸', 'us': '🇺🇸',
+    'europe': '🇪🇺', 'eu': '🇪🇺',
+    'atp': '🎾', 'wta': '🎾'
+  };
+  return map[code.toLowerCase()] || '🏆';
+}
+
+function isTopLeague(name, sport) {
+  if (!name) return false;
+  const top = {
+    foot: ['Ligue 1', 'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Champions League', 'Europa League'],
+    tennis: ['ATP', 'WTA', 'Grand Slam', 'Roland Garros', 'Wimbledon', 'US Open', 'Australian Open'],
+    basket: ['NBA', 'EuroLeague', 'EuroCup', 'Liga ACB', 'Betclic Elite']
+  };
+  return (top[sport] || []).some(t => name.toLowerCase().includes(t.toLowerCase()));
+}
+
+function renderMatchs() {
+  const cacheKey = `${STATE.sport}-${STATE.date}`;
+  let matches = STATE.matchesCache[cacheKey] || [];
+  
+  if (STATE.filter === 'top') matches = matches.filter(m => m.top);
+
+  if (!matches.length) {
+    $('matchsContainer').innerHTML = `
+      <div class="empty-view">
+        <div class="big-ico">📭</div>
+        <h3>Aucun match</h3>
+        <p>Aucun match disponible pour cette date / ce filtre.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Sort by timestamp
+  matches.sort((a, b) => a.timestamp - b.timestamp);
+
+  // Group by league
+  const groups = {};
+  matches.forEach(m => {
+    if (!groups[m.league]) groups[m.league] = { flag: m.flag, matches: [] };
+    groups[m.league].matches.push(m);
+  });
+
+  $('matchsContainer').innerHTML = Object.entries(groups).map(([league, g]) => `
+    <div class="league-group" id="lg-${slug(league)}">
+      <div class="league-header" onclick="toggleLeague('lg-${slug(league)}')">
+        <span class="league-flag">${g.flag}</span>
+        <span class="league-name">${league}</span>
+        <span class="league-count">${g.matches.length}</span>
+        <svg class="league-toggle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="league-body">
+        ${g.matches.map(m => renderMatchRow(m)).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderMatchRow(m) {
+  const isLive = m.status === 'inprogress';
+  const isFinished = m.status === 'finished';
+  let statusText = m.country.substring(0, 6).toUpperCase();
+  if (isLive) statusText = 'LIVE';
+  if (isFinished) statusText = 'FIN';
+  
+  return `
+    <div class="match-row" onclick='openMatch(${JSON.stringify(m).replace(/'/g, "&#39;")})'>
+      <div class="match-time-col">
+        <div class="time">${m.time}</div>
+        <div class="status ${isLive ? 'live' : ''}">${statusText}</div>
+      </div>
+      <div class="match-teams-col">
+        <div class="team-row">
+          <span class="team-name">${m.home}</span>
+          ${m.homeScore != null ? `<span class="team-score">${m.homeScore}</span>` : ''}
+        </div>
+        <div class="team-row">
+          <span class="team-name">${m.away}</span>
+          ${m.awayScore != null ? `<span class="team-score">${m.awayScore}</span>` : ''}
+        </div>
+      </div>
+      <div class="odds-col">
+        <span>${STATE.sport === 'foot' ? '⚽' : STATE.sport === 'tennis' ? '🎾' : '🏀'}</span>
+      </div>
+    </div>
+  `;
+}
+
+function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]/g, '-'); }
+function toggleLeague(id) { $(id).classList.toggle('collapsed'); }
+
+// ====================
+// OPEN MATCH DRAWER
+// ====================
+async function openMatch(match) {
+  STATE.selectedMatch = match;
+  const sport = STATE.sport;
+  const types = PROMPT_TYPES[sport];
+  
+  const grouped = {};
+  types.forEach(t => {
+    if (!grouped[t.cat]) grouped[t.cat] = [];
+    grouped[t.cat].push(t);
+  });
+
+  const catLabels = {
+    main: '🎯 Marchés principaux',
+    stats: '📊 Stats',
+    combo: '🎰 Combos',
+    handicap: '⚖️ Handicaps',
+    quart: '🏀 Quart-temps'
+  };
+
+  let promptsHTML = '';
+  Object.entries(grouped).forEach(([cat, items]) => {
+    promptsHTML += `<div class="section-title">${catLabels[cat] || cat}</div>`;
+    promptsHTML += `<div class="prompt-pills">${items.map(t => `
+      <button class="prompt-pill" onclick="genPrompt('${t.id}')">
+        <span class="ico">${t.icon}</span>
+        <span>${t.label}</span>
+      </button>
+    `).join('')}</div>`;
+  });
+
+  $('drawerContent').innerHTML = `
+    <div class="drawer-match">
+      <div class="drawer-league">${match.flag} ${match.league}</div>
+      <div class="drawer-teams">${match.home}<br>vs<br>${match.away}</div>
+      <div class="drawer-time">${match.time}${match.ground ? ' · ' + match.ground : ''}</div>
+    </div>
+
+    <div class="main-actions">
+      <button class="main-action primary" onclick="genPrompt('complete')">
+        <span class="ico">🧠</span>
+        <span>Analyse complète IA</span>
+      </button>
+      <button class="main-action" onclick="genPrompt('stats')">
+        <span class="ico">📋</span>
+        <span>Analyse statistique pure</span>
+      </button>
+      <button class="main-action" onclick="genPrompt('externals')">
+        <span class="ico">🌦️</span>
+        <span>Facteurs externes</span>
+      </button>
+    </div>
+
+    ${promptsHTML}
+    
+    <div id="promptOutput"></div>
+  `;
+
+  $('drawer').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDrawer() {
+  $('drawer').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+$('drawer').addEventListener('click', e => {
+  if (e.target.id === 'drawer') closeDrawer();
+});
+
+// ====================
+// GENERATE PROMPT
+// ====================
+async function genPrompt(type) {
+  const m = STATE.selectedMatch;
+  if (!m) return;
+
+  $('promptOutput').innerHTML = `<div class="loader"><div class="spinner"></div>Récupération des statistiques Sofascore...</div>`;
+
+  let stats = {};
+  
+  try {
+    // Récup form des équipes/joueurs + H2H en parallèle
+    const promises = [];
+    
+    // Last matches home
+    promises.push(api(`team/${m.homeId}/events/last/0`).catch(() => ({ events: [] })));
+    // Last matches away
+    promises.push(api(`team/${m.awayId}/events/last/0`).catch(() => ({ events: [] })));
+    // H2H
+    if (m.customId) {
+      promises.push(api(`event/${m.customId}/h2h`).catch(() => ({ events: [] })));
+    }
+    
+    const [homeLast, awayLast, h2h] = await Promise.all(promises);
+    stats.homeForm = (homeLast.events || []).slice(0, 5);
+    stats.awayForm = (awayLast.events || []).slice(0, 5);
+    stats.h2h = h2h ? (h2h.events || []).slice(0, 5) : [];
+  } catch (err) {
+    console.error('Stats fetch error:', err);
+    stats._note = 'Certaines stats indisponibles';
+  }
+
+  const prompt = STATE.sport === 'foot' ? buildFootPrompt(m, type, stats)
+               : STATE.sport === 'tennis' ? buildTennisPrompt(m, type, stats)
+               : buildBasketPrompt(m, type, stats);
+
+  STATE.currentPrompt = prompt;
+
+  $('promptOutput').innerHTML = `
+    <div class="output-section">
+      <div class="output-head">
+        <div class="output-title">📝 Prompt généré</div>
+        <div class="actions">
+          <button class="action-btn secondary" onclick="openClaude()">→ Claude</button>
+          <button class="action-btn" id="copyBtn" onclick="copyPrompt()">Copier</button>
+        </div>
+      </div>
+      <div class="prompt-text">${escapeHtml(prompt)}</div>
+    </div>
+  `;
+  
+  setTimeout(() => $('promptOutput').scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+}
+
+// ====================
+// PROMPT BUILDERS
+// ====================
+function formatMatchLine(e) {
+  const hs = e.homeScore?.current ?? '?';
+  const as = e.awayScore?.current ?? '?';
+  const date = new Date(e.startTimestamp * 1000).toLocaleDateString('fr-FR');
+  return `  ${date} : ${e.homeTeam.name} ${hs}-${as} ${e.awayTeam.name}`;
+}
+
+function buildFootPrompt(m, type, stats) {
+  let s = `Tu es un expert en analyse de paris sportifs football. Analyse ce match en français avec recommandation chiffrée.\n\n`;
+  s += `🏟️ ${m.home} vs ${m.away}\n🏆 ${m.league}\n📅 ${m.time}\n\n`;
+  s += `════════════════════\n📊 FORME RÉCENTE\n════════════════════\n\n`;
+  
+  if (stats.homeForm?.length) {
+    s += `▸ ${m.home} (5 derniers matchs):\n`;
+    stats.homeForm.forEach(e => s += formatMatchLine(e) + '\n');
+    s += '\n';
+  }
+  if (stats.awayForm?.length) {
+    s += `▸ ${m.away} (5 derniers matchs):\n`;
+    stats.awayForm.forEach(e => s += formatMatchLine(e) + '\n');
+    s += '\n';
+  }
+  if (stats.h2h?.length) {
+    s += `🤝 H2H (5 dernières confrontations):\n`;
+    stats.h2h.forEach(e => s += formatMatchLine(e) + '\n');
+    s += '\n';
+  }
+
+  s += `════════════════════\n🎯 DEMANDE\n════════════════════\n\n`;
+  s += getFootInstruction(type);
+  s += `\n\n💡 N'hésite pas à utiliser tes connaissances pour évaluer :\n- Compositions probables / blessés titulaires (impact MAJEUR si star blessée)\n- Suspensions et joueurs sous menace de carton\n- Météo prévue\n- Arbitre et tendances\n- Calendrier (fatigue, rotation)\n- Enjeu (championnat, coupe, classement)\n\n⚠️ Réponds entièrement en français. Sois direct et chiffré. Termine par 1 pari principal + 1 pari secondaire avec niveau de confiance (faible/moyen/élevé) et stake suggéré sur 10.`;
+  
+  if (stats._note) s += `\n\n${stats._note}`;
+  return s;
+}
+
+function buildTennisPrompt(m, type, stats) {
+  let s = `Tu es un expert en analyse de paris sportifs tennis. Analyse ce match en français avec recommandation chiffrée.\n\n`;
+  s += `🎾 ${m.home} vs ${m.away}\n🏆 ${m.league}\n📅 ${m.time}\n`;
+  if (m.ground) s += `🟫 Surface : ${m.ground}\n`;
+  s += `\n════════════════════\n📊 FORME RÉCENTE\n════════════════════\n\n`;
+  
+  if (stats.homeForm?.length) {
+    s += `▸ ${m.home} (5 derniers matchs):\n`;
+    stats.homeForm.forEach(e => s += formatMatchLine(e) + ` (${e.tournament?.name || ''})\n`);
+    s += '\n';
+  }
+  if (stats.awayForm?.length) {
+    s += `▸ ${m.away} (5 derniers matchs):\n`;
+    stats.awayForm.forEach(e => s += formatMatchLine(e) + ` (${e.tournament?.name || ''})\n`);
+    s += '\n';
+  }
+  if (stats.h2h?.length) {
+    s += `🤝 H2H:\n`;
+    stats.h2h.forEach(e => s += formatMatchLine(e) + '\n');
+    s += '\n';
+  }
+
+  s += `════════════════════\n🎯 DEMANDE\n════════════════════\n\n`;
+  s += getTennisInstruction(type);
+  s += `\n\n💡 Utilise tes connaissances pour évaluer :\n- Classement ATP/WTA actuel et évolution\n- Winrate sur la surface (terre/dur/gazon)\n- Qualité des adversaires battus récemment\n- Style de jeu (servant, défenseur, polyvalent)\n- Fatigue dans le tournoi (matchs joués, durée)\n- Conditions (météo, vent, chaleur)\n- Enjeu (Grand Chelem, points ATP à défendre)\n\n⚠️ Réponds en français, direct et chiffré. Termine par 1 pari principal + 1 secondaire avec niveau de confiance et stake suggéré sur 10.`;
+  
+  if (stats._note) s += `\n\n${stats._note}`;
+  return s;
+}
+
+function buildBasketPrompt(m, type, stats) {
+  let s = `Tu es un expert en analyse de paris sportifs basketball. Analyse ce match en français avec recommandation chiffrée.\n\n`;
+  s += `🏀 ${m.home} vs ${m.away}\n🏆 ${m.league}\n📅 ${m.time}\n\n`;
+  s += `════════════════════\n📊 FORME RÉCENTE\n════════════════════\n\n`;
+  
+  if (stats.homeForm?.length) {
+    s += `▸ ${m.home} (5 derniers matchs):\n`;
+    stats.homeForm.forEach(e => s += formatMatchLine(e) + '\n');
+    s += '\n';
+  }
+  if (stats.awayForm?.length) {
+    s += `▸ ${m.away} (5 derniers matchs):\n`;
+    stats.awayForm.forEach(e => s += formatMatchLine(e) + '\n');
+    s += '\n';
+  }
+  if (stats.h2h?.length) {
+    s += `🤝 H2H:\n`;
+    stats.h2h.forEach(e => s += formatMatchLine(e) + '\n');
+    s += '\n';
+  }
+
+  s += `════════════════════\n🎯 DEMANDE\n════════════════════\n\n`;
+  s += getBasketInstruction(type);
+  s += `\n\n💡 Utilise tes connaissances pour évaluer :\n- Status joueurs (blessés stars, GTD, OUT)\n- Pace des équipes (rapide vs lent)\n- Stats offensive/défensive (ortg, drtg)\n- % 3 points et tirs\n- Back-to-back (fatigue)\n- Home advantage\n- Enjeu (playoffs, seeding)\n\n⚠️ Réponds en français, direct et chiffré. Termine par 1 pari principal + 1 secondaire avec niveau de confiance et stake suggéré sur 10.`;
+  
+  if (stats._note) s += `\n\n${stats._note}`;
+  return s;
+}
+
+function getFootInstruction(type) {
+  const P = {
+    'complete': 'ANALYSE COMPLÈTE multi-marchés :\n1. Résultat 1X2 + double chance\n2. BTTS (oui/non)\n3. Total buts (Over/Under 2.5)\n4. Marchés value (handicap, mi-temps, scores)\n5. Top 3 paris avec confiance et stake',
+    'stats': 'ANALYSE STATISTIQUE pure : étudie uniquement les chiffres et tendances des matchs récents. Identifie les marchés les plus clairs.',
+    'externals': 'ANALYSE des FACTEURS EXTERNES : météo, blessures titulaires, arbitre, calendrier, enjeu psychologique.',
+    '90-1x2': 'Analyse le RÉSULTAT FINAL 1X2.',
+    '45-1x2': 'Analyse le RÉSULTAT À LA MI-TEMPS 1X2.',
+    '90-buts': 'Analyse le TOTAL DE BUTS 90\'.',
+    'btts': 'Analyse BTTS (les 2 marquent).',
+    '90-scores': 'Top 5 SCORES EXACTS les plus probables.',
+    'minute-15': 'Analyse probabilité de BUT AVANT LA 15ème MINUTE.',
+    'corners': 'Analyse CORNERS attendus.',
+    'cartons': 'Analyse CARTONS et PENALTIES.',
+    'double-combo': 'COMBO 2 PARIS avec value.',
+    'triple-combo': 'COMBO 3 PARIS agressif.'
+  };
+  return P[type] || P.complete;
+}
+
+function getTennisInstruction(type) {
+  const P = {
+    'complete': 'ANALYSE COMPLÈTE multi-marchés tennis :\n1. Vainqueur (ML)\n2. Score en sets\n3. Total jeux\n4. 1er set\n5. Handicaps\n6. Tie-break\n7. Top 3 paris',
+    'stats': 'ANALYSE STATISTIQUE pure tennis.',
+    'externals': 'FACTEURS EXTERNES tennis : météo, fatigue tournoi, adaptation surface, enjeu.',
+    'winner': 'Analyse VAINQUEUR du match.',
+    'sets': 'Analyse SCORE EN SETS.',
+    'games-total': 'Analyse TOTAL DE JEUX.',
+    'first-set': 'Analyse VAINQUEUR 1ER SET.',
+    'handicap-sets': 'Analyse HANDICAP SETS.',
+    'handicap-games': 'Analyse HANDICAP JEUX.',
+    'tiebreak': 'TIE-BREAK : oui/non ?',
+    'aces': 'Analyse TOTAL ACES.'
+  };
+  return P[type] || P.complete;
+}
+
+function getBasketInstruction(type) {
+  const P = {
+    'complete': 'ANALYSE COMPLÈTE multi-marchés basket :\n1. Vainqueur (ML)\n2. Spread\n3. Total points\n4. Mi-temps\n5. Stats joueurs si value\n6. Top 3 paris',
+    'stats': 'ANALYSE STATISTIQUE basket.',
+    'externals': 'FACTEURS EXTERNES basket : blessures stars, back-to-back, home advantage, enjeu.',
+    'winner-bb': 'Analyse VAINQUEUR (ML).',
+    'handicap-bb': 'Analyse SPREAD/HANDICAP.',
+    'total-pts': 'Analyse TOTAL POINTS.',
+    'mi-temps-bb': 'Analyse MI-TEMPS.',
+    'quart-1': 'Analyse VAINQUEUR Q1.',
+    'pts-q1': 'Analyse POINTS Q1.',
+    'trois-points': 'Analyse TIRS À 3 POINTS.',
+    'double-combo-bb': 'COMBO 2 PARIS basket.'
+  };
+  return P[type] || P.complete;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function copyPrompt() {
+  try {
+    await navigator.clipboard.writeText(STATE.currentPrompt);
+    const btn = $('copyBtn');
+    btn.classList.add('copied');
+    btn.textContent = '✓ Copié';
+    toast('✓ Prompt copié !');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.textContent = 'Copier';
+    }, 2000);
+  } catch (e) { toast('Erreur copie', 'error'); }
+}
+
+function openClaude() {
+  copyPrompt();
+  setTimeout(() => window.open('https://claude.ai/new', '_blank'), 300);
+}
+
+// ====================
+// INIT
+// ====================
+renderDateTabs();
+loadMatches();
+</script>
+</body>
+</html>
